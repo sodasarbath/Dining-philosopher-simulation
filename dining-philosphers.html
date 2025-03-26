@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dining Philosophers Simulation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .canvas-container {
+            aspect-ratio: 1;
+            max-width: 100%;
+            position: relative;
+        }
+
+        .watermark {
+            font-size: 24px;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        #simulationCanvas {
+            width: 100%;
+            height: 100%;
+            background-color: #f8f9fa;
+        }
+
+        .controls {
+            gap: 1rem;
+        }
+
+        .controls button {
+            margin: 0 0.5rem;
+            min-width: 100px;
+        }
+
+        .philosopher-status {
+            font-size: 0.9rem;
+        }
+
+        .philosopher-status .philosopher {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            background-color: #f8f9fa;
+        }
+
+        .philosopher-status .philosopher.thinking {
+            background-color: #e3f2fd;
+        }
+
+        .philosopher-status .philosopher.hungry {
+            background-color: #fff3cd;
+        }
+
+        .philosopher-status .philosopher.eating {
+            background-color: #d4edda;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid py-3">
+        <h1 class="text-center mb-3 h3">Dining Philosophers Simulation</h1>
+        
+        <div class="row g-2">
+            <div class="col-md-8">
+                <div class="canvas-container bg-white rounded shadow-sm p-2 mb-2" style="max-width: 800px; margin: 0 auto;">
+                    <canvas id="simulationCanvas"></canvas>
+                </div>
+                
+                <div class="controls text-center mb-2">
+                    <button id="startBtn" class="btn btn-sm btn-success">Start</button>
+                    <button id="stopBtn" class="btn btn-sm btn-danger" disabled>Stop</button>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="explanation-panel bg-white rounded shadow-sm p-2">
+                    <h3 class="h6 mb-2">Simulation Status</h3>
+                    <div id="statusText" class="mb-2 small">
+                        Simulation ready to start.
+                    </div>
+                    <div id="philosopherStatus" class="philosopher-status small">
+                        <!-- Philosopher status will be updated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class Philosopher {
+            constructor(id, x, y) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.state = 'thinking';
+                this.leftFork = false;
+                this.rightFork = false;
+                this.thinkingTime = 0;
+                this.eatingTime = 0;
+            }
+        }
+
+        class DiningPhilosophers {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.philosophers = [];
+                this.forks = [];
+                this.running = false;
+                this.paused = false;
+                this.numPhilosophers = 5;
+                this.setupCanvas();
+                this.initializePhilosophers();
+                this.initializeForks();
+            }
+
+            setupCanvas() {
+                const containerWidth = this.canvas.parentElement.clientWidth;
+                this.canvas.width = containerWidth;
+                this.canvas.height = containerWidth;
+                this.centerX = this.canvas.width / 2;
+                this.centerY = this.canvas.height / 2;
+                this.radius = Math.min(this.centerX, this.centerY) * 0.5;
+            }
+
+            initializePhilosophers() {
+                for (let i = 0; i < this.numPhilosophers; i++) {
+                    const angle = (i * 2 * Math.PI) / this.numPhilosophers;
+                    const x = this.centerX + this.radius * Math.cos(angle);
+                    const y = this.centerY + this.radius * Math.sin(angle);
+                    this.philosophers.push(new Philosopher(i, x, y));
+                }
+            }
+
+            initializeForks() {
+                for (let i = 0; i < this.numPhilosophers; i++) {
+                    this.forks.push(false);
+                }
+            }
+
+            start() {
+                if (!this.running) {
+                    this.running = true;
+                    this.updateButtons();
+                    this.animate();
+                    this.updateStatus('Simulation started');
+                }
+            }
+
+            stop() {
+                this.running = false;
+                this.paused = false;
+                this.updateButtons();
+                this.resetSimulation();
+                this.updateStatus('Simulation stopped')
+            }
+
+            resetSimulation() {
+                this.philosophers.forEach(philosopher => {
+                    philosopher.state = 'thinking';
+                    philosopher.leftFork = false;
+                    philosopher.rightFork = false;
+                });
+                this.forks.fill(false);
+                this.draw();
+                this.updatePhilosopherStatus();
+            }
+
+            updateButtons() {
+                document.getElementById('startBtn').disabled = this.running;
+                document.getElementById('stopBtn').disabled = !this.running;
+            }
+
+            updateStatus(message) {
+                document.getElementById('statusText').textContent = message;
+            }
+
+            updatePhilosopherStatus() {
+                const statusDiv = document.getElementById('philosopherStatus');
+                statusDiv.innerHTML = this.philosophers.map(p => `
+                    <div class="philosopher ${p.state}">
+                        Philosopher ${p.id + 1}: ${p.state.charAt(0).toUpperCase() + p.state.slice(1)}
+                        ${p.leftFork ? `Using Fork ${p.id + 1}` : ''} ${p.rightFork ? `and Fork ${(p.id + 2) % this.numPhilosophers}` : ''}
+                    </div>
+                `).join('');
+            }
+
+            animate() {
+                if (!this.running) return;
+                this.update();
+                this.draw();
+                requestAnimationFrame(() => this.animate());
+            }
+
+            update() {
+                this.philosophers.forEach((philosopher, index) => {
+                    switch (philosopher.state) {
+                        case 'thinking':
+                            philosopher.thinkingTime++;
+                            if (philosopher.thinkingTime > 100) {
+                                philosopher.state = 'hungry';
+                                philosopher.thinkingTime = 0;
+                            }
+                            break;
+
+                        case 'hungry':
+                            const leftFork = index;
+                            const rightFork = (index + 1) % this.numPhilosophers;
+
+                            if (!this.forks[leftFork] && !this.forks[rightFork]) {
+                                this.forks[leftFork] = true;
+                                this.forks[rightFork] = true;
+                                philosopher.leftFork = true;
+                                philosopher.rightFork = true;
+                                philosopher.state = 'eating';
+                            }
+                            break;
+
+                        case 'eating':
+                            philosopher.eatingTime++;
+                            if (philosopher.eatingTime > 600) {
+                                const leftFork = index;
+                                const rightFork = (index + 1) % this.numPhilosophers;
+                                this.forks[leftFork] = false;
+                                this.forks[rightFork] = false;
+                                philosopher.leftFork = false;
+                                philosopher.rightFork = false;
+                                philosopher.state = 'thinking';
+                                philosopher.eatingTime = 0;
+                            }
+                            break;
+                    }
+                });
+                this.updatePhilosopherStatus();
+            }
+
+            drawFork(x1, y1, x2, y2) {
+                // Draw fork handle
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                this.ctx.lineTo(x2, y2);
+                this.ctx.strokeStyle = '#4A4A4A';
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+
+                // Draw fork tines
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const tineLength = 15;
+                const tineSpacing = 5;
+                const tineOffset = 20;
+
+                for (let i = -1; i <= 1; i++) {
+                    const tineX = x2 - tineOffset * Math.cos(angle);
+                    const tineY = y2 - tineOffset * Math.sin(angle);
+                    
+                    const perpX = -Math.sin(angle) * tineSpacing * i;
+                    const perpY = Math.cos(angle) * tineSpacing * i;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(tineX + perpX, tineY + perpY);
+                    this.ctx.lineTo(
+                        tineX + perpX + tineLength * Math.cos(angle),
+                        tineY + perpY + tineLength * Math.sin(angle)
+                    );
+                    this.ctx.stroke();
+                }
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.ctx.beginPath();
+                this.ctx.arc(this.centerX, this.centerY, this.radius * 0.8, 0, 2 * Math.PI);
+                this.ctx.fillStyle = '#8B4513';
+                this.ctx.fill();
+
+                // Draw plates on the table
+                this.philosophers.forEach((philosopher, index) => {
+                    const plateRadius = this.radius * 0.5;
+                    const angle = (index * 2 * Math.PI) / this.numPhilosophers;
+                    const plateX = this.centerX + plateRadius * Math.cos(angle);
+                    const plateY = this.centerY + plateRadius * Math.sin(angle);
+
+                    // Draw plate
+                    this.ctx.beginPath();
+                    this.ctx.arc(plateX, plateY, 30, 0, 2 * Math.PI);
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#CCCCCC';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+
+                    // Draw fork closer to the table center
+                    const forkAngle = angle + Math.PI / this.numPhilosophers;
+                    const forkDistance = 25; // Reduced from 40
+                    const forkStartX = plateX + forkDistance * Math.cos(forkAngle);
+                    const forkStartY = plateY + forkDistance * Math.sin(forkAngle);
+                    const forkEndX = forkStartX + 15 * Math.cos(forkAngle); // Reduced from 20
+                    const forkEndY = forkStartY + 15 * Math.sin(forkAngle);
+                    this.drawFork(forkStartX, forkStartY, forkEndX, forkEndY);
+
+                    // Draw fork number with background circle
+                    const numberX = forkStartX + 20 * Math.cos(forkAngle);
+                    const numberY = forkStartY + 20 * Math.sin(forkAngle);
+                    
+                    // Draw white circle background
+                    this.ctx.beginPath();
+                    this.ctx.arc(numberX, numberY, 10, 0, 2 * Math.PI);
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.stroke();
+                    
+                    // Draw number
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.font = '12px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(index + 1, numberX, numberY);
+                });
+
+                const legendY = 20;
+                const legendX = 20;
+                const legendSpacing = 25;
+                const legendRadius = 10;
+                const legendWidth = 140;
+                const legendHeight = 150;
+                
+                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+                this.ctx.shadowBlur = 10;
+                this.ctx.shadowOffsetX = 2;
+                this.ctx.shadowOffsetY = 2;
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                this.ctx.fillRect(legendX - 10, legendY - 20, legendWidth, legendHeight);
+                
+                this.ctx.shadowColor = 'transparent';
+                this.ctx.strokeStyle = '#000';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(legendX - 10, legendY - 20, legendWidth, legendHeight);
+                
+                this.ctx.fillStyle = '#000';
+                this.ctx.font = 'bold 16px Arial';
+                this.ctx.textAlign = 'left';
+                this.ctx.fillText('Legend', legendX, legendY);
+                this.ctx.font = '14px Arial';
+
+                const states = [
+                    { color: '#64B5F6', text: 'Thinking' },
+                    { color: '#FFB74D', text: 'Hungry' },
+                    { color: '#81C784', text: 'Eating' }
+                ];
+
+                states.forEach((item, index) => {
+                    this.ctx.beginPath();
+                    this.ctx.arc(legendX + 10, legendY + 30 + index * legendSpacing, legendRadius, 0, 2 * Math.PI);
+                    this.ctx.fillStyle = item.color;
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.stroke();
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.fillText(item.text, legendX + 30, legendY + 35 + index * legendSpacing);
+                });
+                
+                const forkY = legendY + legendSpacing * 3 + 30;
+                this.drawFork(legendX, forkY, legendX + 20, forkY);
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillText('Fork', legendX + 30, legendY + legendSpacing * 3 + 35);
+
+                // Draw plates on the table
+                this.philosophers.forEach((philosopher, index) => {
+                    const plateRadius = this.radius * 0.5;
+                    const angle = (index * 2 * Math.PI) / this.numPhilosophers;
+                    const plateX = this.centerX + plateRadius * Math.cos(angle);
+                    const plateY = this.centerY + plateRadius * Math.sin(angle);
+
+                    // Draw plate
+                    this.ctx.beginPath();
+                    this.ctx.arc(plateX, plateY, 30, 0, 2 * Math.PI);
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#CCCCCC';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+
+                    // Draw fork closer to the table center
+                    const forkAngle = angle + Math.PI / this.numPhilosophers;
+                    const forkDistance = 25; // Reduced from 40
+                    const forkStartX = plateX + forkDistance * Math.cos(forkAngle);
+                    const forkStartY = plateY + forkDistance * Math.sin(forkAngle);
+                    const forkEndX = forkStartX + 15 * Math.cos(forkAngle); // Reduced from 20
+                    const forkEndY = forkStartY + 15 * Math.sin(forkAngle);
+                    this.drawFork(forkStartX, forkStartY, forkEndX, forkEndY);
+
+                    // Draw fork number with background circle
+                    const numberX = forkStartX + 20 * Math.cos(forkAngle);
+                    const numberY = forkStartY + 20 * Math.sin(forkAngle);
+                    
+                    // Draw white circle background
+                    this.ctx.beginPath();
+                    this.ctx.arc(numberX, numberY, 10, 0, 2 * Math.PI);
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.stroke();
+                    
+                    // Draw number
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.font = '12px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(index + 1, numberX, numberY);
+                });
+
+
+                // Draw philosophers
+                const philosopherImages = [
+                    'philosophers/plato.svg',
+                    'philosophers/aristotle.svg',
+                    'philosophers/socrates.svg',
+                    'philosophers/kant.svg',
+                    'philosophers/descartes.svg'
+                ];
+
+                this.philosophers.forEach((philosopher, index) => {
+                    const img = new Image();
+                    img.src = philosopherImages[index];
+
+                    // Draw philosopher image
+                    this.ctx.save();
+                    
+                    // Apply state-based effects
+                    switch (philosopher.state) {
+                        case 'thinking': this.ctx.filter = 'hue-rotate(180deg)'; break;
+                        case 'hungry': this.ctx.filter = 'sepia(100%)'; break;
+                        case 'eating': this.ctx.filter = 'brightness(120%)'; break;
+                    }
+
+                    // Draw fallback circle if image fails to load
+                    const drawFallback = () => {
+                        this.ctx.beginPath();
+                        this.ctx.arc(philosopher.x, philosopher.y, 25, 0, 2 * Math.PI);
+                        this.ctx.fillStyle = philosopher.state === 'thinking' ? '#64B5F6' : 
+                                            philosopher.state === 'hungry' ? '#FFB74D' : '#81C784';
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.stroke();
+                    };
+
+                    // Try to draw the image, fallback to circle if it fails
+                    if (img.complete) {
+                        try {
+                            this.ctx.drawImage(img, philosopher.x - 25, philosopher.y - 25, 50, 50);
+                        } catch (e) {
+                            drawFallback();
+                        }
+                    } else {
+                        img.onload = () => {
+                            try {
+                                this.ctx.drawImage(img, philosopher.x - 25, philosopher.y - 25, 50, 50);
+                            } catch (e) {
+                                drawFallback();
+                            }
+                        };
+                        img.onerror = drawFallback;
+                        drawFallback(); // Draw fallback initially while image loads
+                    }
+                    this.ctx.restore();
+
+                    // Draw number label
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.font = 'bold 16px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(index + 1, philosopher.x, philosopher.y + 35);
+                });
+            }
+        }
+
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('simulationCanvas');
+            const simulation = new DiningPhilosophers(canvas);
+            simulation.draw(); // Initial draw call
+
+            document.getElementById('startBtn').addEventListener('click', () => simulation.start());
+            document.getElementById('stopBtn').addEventListener('click', () => simulation.stop());
+
+            const debounce = (func, wait) => {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            };
+
+            window.addEventListener('resize', debounce(() => {
+                simulation.setupCanvas();
+                simulation.philosophers = [];
+                simulation.initializePhilosophers();
+                simulation.draw();
+            }, 250));
+
+            simulation.draw();
+        });
+    </script>
+</body>
+</html>
