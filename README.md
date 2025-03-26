@@ -12,7 +12,6 @@ The Dining Philosophers problem is a classic computer science problem that illus
 - 🔄 Real-time state updates
 - ⏯️ Start, pause, and stop controls
 - 📊 Status display for each philosopher
-- 🍽️ Animated fork movements
 - 📱 Responsive canvas design
 - 🎯 Clear state indicators (thinking, hungry, eating)
 - 💫 Visual effects for different states
