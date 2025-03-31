@@ -17,8 +17,10 @@ To run the simulation:
 2. Open the `index.html` file in your browser.
 3. Use the buttons to control the simulation.
 
-## Contributors
-This simulation was developed by [Your Name].
+## Detailed Description
+This simulation models the concurrency problem by allowing each philosopher to pick up forks only when both are available, thus preventing deadlock. The visual representation helps in understanding the state transitions of philosophers and the allocation of forks. The use of HTML5 Canvas provides a dynamic and interactive visualization, while JavaScript handles the logic for state management and user interactions.
+
+The simulation is designed to be intuitive, with clear visual cues for each philosopher's state and the availability of forks. The user interface is straightforward, with buttons to control the flow of the simulation, making it accessible for educational purposes and demonstrations.
 
 ## Resources
 - [Dining Philosophers Problem](https://en.wikipedia.org/wiki/Dining_philosophers_problem)
