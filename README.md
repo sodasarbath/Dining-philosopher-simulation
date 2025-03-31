@@ -1,4 +1,4 @@
-# Dining Philosophers Simulation 🍽️🤔
+# Dining Philosophers Simulation 🍽️
 
 ## Overview 📚
 The Dining Philosophers problem is a classic example in computer science that illustrates issues related to concurrency and resource allocation. It involves philosophers sitting around a table, each needing two forks to eat, leading to potential deadlock and starvation scenarios.
