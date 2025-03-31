@@ -1,24 +1,26 @@
 # Dining Philosophers Simulation
 
-A visual implementation of the classic Dining Philosophers problem, demonstrating concurrent programming concepts and resource sharing challenges through an interactive web-based simulation.
-
 ## Overview
+The Dining Philosophers problem is a classic example in computer science that illustrates issues related to concurrency and resource allocation. It involves philosophers sitting around a table, each needing two forks to eat, leading to potential deadlock and starvation scenarios.
 
-The Dining Philosophers problem is a classic computer science problem that illustrates synchronization issues and techniques for resolving them. In this simulation, five philosophers sit around a circular table, alternating between thinking, becoming hungry, and eating. Each philosopher needs two forks to eat, but there are only five forks in total (one between each pair of philosophers).
+## Implementation
+This simulation is implemented using HTML5 Canvas for visualization and JavaScript for logic. The simulation visually represents philosophers and forks, allowing users to observe the state changes and interactions.
 
-## Features
+## Key Features
+- **Philosopher States**: Philosophers can be in one of three states - thinking, hungry, or eating.
+- **Fork Management**: Forks are shared resources that philosophers must acquire to eat.
+- **User Controls**: Users can start, pause, and stop the simulation using buttons.
 
-- 🎨 Visual representation of philosophers and forks
-- 🔄 Real-time state updates
-- ⏯️ Start, pause, and stop controls
-- 📊 Status display for each philosopher
-- 📱 Responsive canvas design
-- 🎯 Clear state indicators (thinking, hungry, eating)
-- 💫 Visual effects for different states
-- 📋 Interactive legend
+## Setup and Running
+To run the simulation:
+1. Ensure you have a web browser that supports HTML5 Canvas.
+2. Open the `index.html` file in your browser.
+3. Use the buttons to control the simulation.
 
-## States
+## Contributors
+This simulation was developed by [Your Name].
 
-- **Thinking (Blue)**: Philosopher is in contemplation
-- **Hungry (Orange)**: Philosopher is attempting to acquire forks
-- **Eating (Green)**: Philosopher has successfully acquired both forks and is eating
+## Resources
+- [Dining Philosophers Problem](https://en.wikipedia.org/wiki/Dining_philosophers_problem)
+- HTML5 Canvas Documentation
+- JavaScript Documentation
